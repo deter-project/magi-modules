@@ -1,0 +1,10 @@
+name: Server 
+magi_version: 1.7
+display: TCP Server  
+description: A simple server that starts on the specifcied port  
+execute: thread
+mainfile: server.py
+inherits:
+    - SharedServer
+
+

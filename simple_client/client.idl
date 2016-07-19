@@ -1,0 +1,2 @@
+execute: thread
+mainfile: client.py

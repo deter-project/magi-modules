@@ -1,0 +1,35 @@
+
+groups:
+  client_group: [dmagib]
+
+agents:
+  client_agent:
+    group: client_group
+    path: /users/hussain/projects/github/magi-modules/simple_client/ 
+    execargs: { server: 'loo'  } 
+
+streamstarts: [ client_stream ]
+
+eventstreams:
+
+  client_stream:         
+      - type: event
+        agent: client_agent
+        method: startclient
+        args: { }  
+        trigger: ClientStarted
+
+      - type: trigger
+        triggers: [ {event: ClientStarted} ]
+        
+      - type: trigger
+        triggers: [ {timeout: 30000} ]
+        
+      - type: event
+        agent: client_agent
+        method: stopclient
+        args: {}
+        trigger: agentStopped
+
+      - type: trigger
+        triggers: [ {event: agentStopped, target: 'exit'} ]

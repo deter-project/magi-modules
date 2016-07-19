@@ -8,17 +8,17 @@ import threading
 from magi.util import helpers
 
 
-PORT=39814
 BUFF=1024
 FALSE=0
 TXTIMEOUT=1
+PORT = 55343
 
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG) 
 
-ch = logging.StreamHandler()
-log.addHandler(ch)
+#ch = logging.StreamHandler()
+#log.addHandler(ch)
 
 class ServerCommService:
     
@@ -28,16 +28,16 @@ class ServerCommService:
         self.threadMap = dict()
         self.sock = None
     
-    def initCommServer(self, replyHandler):
+    def initCommServer(self, port, replyHandler):
         functionName = self.initCommServer.__name__
         helpers.entrylog(log, functionName, level=logging.INFO)
-        
+       
         self.sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 #         sock = socket.socket(socket.AF_INET, # Internet
 #                              socket.SOCK_DGRAM) # UDP
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.settimeout(TXTIMEOUT)
-        self.sock.bind(('0.0.0.0', PORT))
+        self.sock.bind(('0.0.0.0', port))
         self.sock.listen(5)
         
         self.active = True
@@ -50,24 +50,36 @@ class ServerCommService:
     #Blocking, never returns
     def commServerThread(self, replyHandler):
         
-        log.info("Running commServerThread on %s" % threading.currentThread().name)
+        log.debug("Running commServerThread on %s" % threading.currentThread().name)
         
         while self.active:
             try:
                 log.info("Waiting for clients to connect.....") 
                 clientsock, addr = self.sock.accept()
-                time.sleep(3)
+                log.info("Client Connected from address %s" % addr)  
+
+                # AH: Need to add this to eleiminate race condition on server. 
+                time.sleep(1)
                 rxdata = clientsock.recv(BUFF)
+            # Once there is a accept on the socket, it waits for data from the 
+            # client 
+            # if it does not receive data from the client is continues?  
+            #
             except socket.timeout:
                 continue
+
+            
 
             try:
                 jdata = json.loads(rxdata.strip())
             except:
-                log.info("Exception in commServerThread while trying to parse JSON %s" % repr(rxdata))
-                continue
+                    log.info("Exception in commServerThread while trying to parse clientId information in JSON %s" % repr(rxdata))
+                    log.info("Closing connection from client at %s" %(addr)) 
+                    log.info("Leaving commServerThread %s" % threading.currentThread().name)
+                    self.sock.close()
+                    return False 
             
-            log.info("New Connection: %s" %(jdata))
+            log.info("Received Data from client with Connection Info %s" %(jdata))
 
             clientId = jdata['src']
             nthread = Thread(name="ServerHandler for " + str(clientId), target=self.ServerHandler, args=(clientId, clientsock, replyHandler))
@@ -95,23 +107,21 @@ class ServerCommService:
                 rxdata = clientsock.recv(BUFF)
                 log.debug("Data Received: %s" %(repr(rxdata)))
             except socket.timeout:
-                log.info("Socket read failing.....")
+                log.info("Socket timed out .....")
                 self.stop()
                 continue
             
             try:
                 jdata = json.loads(rxdata.strip())
             except :
-                log.info("Exception in ServerHandler while trying to parse JSON string: %s" % repr(rxdata))
-                self.stop()
-                continue
+                if len(rxdata) == 0: 
+                    log.info("Exception in commServerThread while trying to parse %s" % repr(rxdata))
+                    log.info("Closing connection from client at %s" %(clientId)) 
+                    self.active = False 
+                    continue
 
             log.debug('ServerHandler RX data: %s' % repr(jdata))
-            textstring = "Hello Client " + str(clientId) + " from the server" 
-            data = json.dumps({'src': 'server', 'text': textstring }) 
-            self.sendOneData(clientId, data) 
-
-            #replyHandler(jdata)
+            replyHandler(jdata)
 
         #Cleanup
         clientsock.close()

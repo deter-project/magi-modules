@@ -10,7 +10,7 @@ import time
 from magi.util import helpers
 
 
-PORT=39814
+PORT=55343
 BUFF=1024
 FALSE=0
 TXTIMEOUT=1
@@ -18,13 +18,9 @@ TXTIMEOUT=1
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
-ch = logging.StreamHandler()
-log.addHandler(ch) 
-
 class ClientCommService:
     
     def __init__(self, clientId):
-
         log.info("In ClientCommService Init")
 
         self.active = False
@@ -55,6 +51,9 @@ class ClientCommService:
                 retries += 1
                 log.info("Socket timed out, exception: %s" % repr(e))
                 time.sleep(0.1 + (random.random()*0.3))
+                if retries == 10:
+                    log.info("Failed to connect after ten retires...  %s" % repr(e))
+                    return 
 
         #data = json.dumps({'src': self.clientId})
         #self.sock.send(data)

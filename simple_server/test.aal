@@ -1,0 +1,35 @@
+
+groups:
+  server_group: [dmagib]
+
+agents:
+  server_agent:
+    group: server_group
+    path: /users/hussain/projects/github/magi-modules/simple_server/ 
+    execargs: { } 
+
+streamstarts: [ server_stream ]
+
+eventstreams:
+
+  server_stream:         
+      - type: event
+        agent: server_agent
+        method: startServer
+        args: { port: 54454 }
+        trigger: commServerStarted
+
+      - type: trigger
+        triggers: [ {event: commServerStarted} ]
+        
+      - type: trigger
+        triggers: [ {timeout: 30000} ]
+        
+      - type: event
+        agent: server_agent
+        method: stopServer 
+        args: {}
+        trigger: agentStopped
+
+      - type: trigger
+        triggers: [ {event: agentStopped, target: 'exit'} ]
