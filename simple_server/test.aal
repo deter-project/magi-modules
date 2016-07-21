@@ -1,12 +1,19 @@
 
 groups:
-  server_group: [dmagib]
+  server_group: [ node-30 ]
+  client_group: [ node-13 ] 
 
 agents:
   server_agent:
     group: server_group
-    path: /users/hussain/projects/github/magi-modules/simple_server/ 
-    execargs: { } 
+    path: /users/alefiya/projects/github/magi-modules/simple_server/ 
+    execargs: { port: 55353  } 
+
+  client_agent:
+    group: client_group
+    path: /users/alefiya/projects/github/magi-modules/simple_client/
+    execargs: { port: 55353, server: 'node-30'  }
+
 
 streamstarts: [ server_stream ]
 
@@ -20,16 +27,27 @@ eventstreams:
         trigger: commServerStarted
 
       - type: trigger
-        triggers: [ {event: commServerStarted} ]
+        triggers: [ {event: commServerStarted, target: client_stream } ]
         
-      - type: trigger
-        triggers: [ {timeout: 30000} ]
-        
+       
+  client_stream:  
       - type: event
-        agent: server_agent
-        method: stopServer 
-        args: {}
-        trigger: agentStopped
+        agent: client_agent
+        method: startclient
+        args: { }
+        trigger: ClientStarted
 
       - type: trigger
-        triggers: [ {event: agentStopped, target: 'exit'} ]
+        triggers: [ {event: ClientStarted} ]
+
+      - type: trigger
+        triggers: [ {timeout: 30000} ]
+
+      - type: event
+        agent: client_agent
+        method: stopclient
+        args: {}
+        trigger: CagentStopped
+
+      - type: trigger
+        triggers: [ {event: CagentStopped, target: 'exit'} ]

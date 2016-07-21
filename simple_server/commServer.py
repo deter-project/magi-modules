@@ -17,8 +17,8 @@ PORT = 55343
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG) 
 
-#ch = logging.StreamHandler()
-#log.addHandler(ch)
+ch = logging.StreamHandler()
+log.addHandler(ch)
 
 class ServerCommService:
     
@@ -35,6 +35,7 @@ class ServerCommService:
         self.sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 #         sock = socket.socket(socket.AF_INET, # Internet
 #                              socket.SOCK_DGRAM) # UDP
+        log.info("Starting a server at port %s" %(port))
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.settimeout(TXTIMEOUT)
         self.sock.bind(('0.0.0.0', port))
@@ -54,12 +55,15 @@ class ServerCommService:
         
         while self.active:
             try:
-                log.info("Waiting for clients to connect.....") 
+                log.info('%s: Waiting for clients to connect.....' % threading.currentThread().name) 
                 clientsock, addr = self.sock.accept()
-                log.info("Client Connected from address %s" % addr)  
+
+                address = addr[0] 
+                port = addr[1] 
+                print 'connected by' , addr 
+                log.info('Client Connected from address %s' % repr(address))  
 
                 # AH: Need to add this to eleiminate race condition on server. 
-                time.sleep(1)
                 rxdata = clientsock.recv(BUFF)
             # Once there is a accept on the socket, it waits for data from the 
             # client 
@@ -103,12 +107,11 @@ class ServerCommService:
         self.sendOneData(clientId, data) 
 
         while self.active:
+            log.info("Waiting to get data from client")
             try:
                 rxdata = clientsock.recv(BUFF)
                 log.debug("Data Received: %s" %(repr(rxdata)))
             except socket.timeout:
-                log.info("Socket timed out .....")
-                self.stop()
                 continue
             
             try:
@@ -121,7 +124,9 @@ class ServerCommService:
                     continue
 
             log.debug('ServerHandler RX data: %s' % repr(jdata))
-            replyHandler(jdata)
+            sresponse  = replyHandler(jdata)
+            data = json.dumps({'src': 'server', 'text': sresponse }) 
+            self.sendOneData(clientId, data) 
 
         #Cleanup
         clientsock.close()
@@ -141,6 +146,8 @@ class ServerCommService:
     def onerecv(self, data):
         log.info('Data is from %s' % repr(data))
         print ("** All done now **")
+        sendstring = "Thank you" 
+        return sendstring 
 
     def sendData(self, clientId, data):
         data['dst'] = clientId
@@ -162,6 +169,6 @@ class ServerCommService:
 
 if __name__ == "__main__":
     server= ServerCommService()
-    server.initCommServer(server.onerecv)
-    time.sleep(10)
+    server.initCommServer(55353, server.onerecv)
+    time.sleep(60)
     server.stop()    

@@ -12,6 +12,11 @@ from commServer import ServerCommService
 
 
 log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG) 
+
+#ch = logging.StreamHandler()
+#log.addHandler(ch)
+
 
 
 class Server(SharedServer):
@@ -43,10 +48,13 @@ class Server(SharedServer):
         helpers.exitlog(log, functionName, level=logging.INFO)
         return True  
 
-    def responseHandler(self):
+    def responseHandler(self,recvdata):
     # this is a dummy response handler 
+        
+	log.info("Got info %s" %(rcvdata)) 
+	sendstring = "Thank you" 	
 
-        return True 
+        return sendstring  
 
 def getAgent(**kwargs):
     agent = Server()
