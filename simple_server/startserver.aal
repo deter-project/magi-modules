@@ -1,0 +1,21 @@
+
+groups:
+  server_group: [ node-11 ]
+
+agents:
+  server_agent:
+    group: server_group
+    path: /users/alefiya/projects/github/magi-modules/simple_server/ 
+    execargs: { port: 55353  } 
+
+streamstarts: [ server_stream ]
+
+eventstreams:
+
+  server_stream:         
+      - type: event
+        agent: server_agent
+        method: startServer
+        args: { }
+        trigger: commServerStarted
+

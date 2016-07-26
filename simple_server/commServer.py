@@ -23,9 +23,11 @@ log.addHandler(ch)
 class ServerCommService:
     
     def __init__(self):
+	# The initialization function creates three maps to track the clients 
         self.active = False
         self.transportMap = dict()
         self.threadMap = dict()
+	self.activeCmap = dict() 
         self.sock = None
     
     def initCommServer(self, port, replyHandler):
@@ -33,8 +35,6 @@ class ServerCommService:
         helpers.entrylog(log, functionName, level=logging.INFO)
        
         self.sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-#         sock = socket.socket(socket.AF_INET, # Internet
-#                              socket.SOCK_DGRAM) # UDP
         log.info("Starting a server at port %s" %(port))
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.settimeout(TXTIMEOUT)
@@ -89,6 +89,7 @@ class ServerCommService:
             nthread = Thread(name="ServerHandler for " + str(clientId), target=self.ServerHandler, args=(clientId, clientsock, replyHandler))
             self.threadMap[clientId] = nthread
             self.transportMap[clientId] = clientsock
+	    
             nthread.start()
             
             log.info('Client %s connected.' %(clientId))

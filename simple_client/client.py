@@ -12,6 +12,8 @@ from commClient import ClientCommService
 
 
 log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG) 
+
 
 class Client(DispatchAgent):
     
@@ -19,6 +21,7 @@ class Client(DispatchAgent):
         # The default arguments for server and clientId go in here 
         DispatchAgent.__init__(self)
         self.server = 'localhost' 
+	self.port = 55343 
         self.clientId = None 
     
     def setConfiguration(self, msg, **kwargs):
@@ -37,7 +40,7 @@ class Client(DispatchAgent):
     @agentmethod()
     def startclient(self, msg):
         self.commClient = ClientCommService(self.clientId)
-        self.commClient.initCommClient(self.server, self.requestHandler)
+        self.commClient.initCommClient(self.server, self.port, self.requestHandler)
     
     @agentmethod()
     def stopclient(self, msg):
@@ -48,15 +51,11 @@ class Client(DispatchAgent):
     def requestHandler(self, msgData):
         log.info("RequestHandler: %s", msgData)
         
-        dst = msgData['dst']
-        if dst != self.hostname:
-            log.error("Message sent to incorrect destination.")
-            return
-        
         src= msgData['src']
-        string = msgData['string']
+        string = msgData['text']
 
         log.info("src and string: %s %s", src, string) 
+        return "Hello there" 
     
     def setClientid(self):
     # The method is called in the setConfiguration to set a unique clientID  for the client in a group 

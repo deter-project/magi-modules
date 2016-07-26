@@ -1,12 +1,12 @@
 
 groups:
-  client_group: [dmagib]
+  client_group: [ node-4 ]
 
 agents:
   client_agent:
     group: client_group
-    path: /users/hussain/projects/github/magi-modules/simple_client/ 
-    execargs: { server: 'loo'  } 
+    path: /users/alefiya/projects/github/magi-modules/simple_client/ 
+    execargs: { server: 'node-11', port: 55353  } 
 
 streamstarts: [ client_stream ]
 
@@ -29,7 +29,7 @@ eventstreams:
         agent: client_agent
         method: stopclient
         args: {}
-        trigger: agentStopped
+        trigger: CagentStopped
 
       - type: trigger
-        triggers: [ {event: agentStopped, target: 'exit'} ]
+        triggers: [ {event: CagentStopped, target: 'exit'} ]
