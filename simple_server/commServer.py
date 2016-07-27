@@ -27,7 +27,7 @@ class ServerCommService:
         self.active = False
         self.transportMap = dict()
         self.threadMap = dict()
-	self.activeCmap = dict() 
+	self.activeClientMap = dict() 
         self.sock = None
     
     def initCommServer(self, port, replyHandler):
@@ -57,42 +57,31 @@ class ServerCommService:
             try:
                 log.info('%s: Waiting for clients to connect.....' % threading.currentThread().name) 
                 clientsock, addr = self.sock.accept()
-
-                address = addr[0] 
-                port = addr[1] 
-                print 'connected by' , addr 
-                log.info('Client Connected from address %s' % repr(address))  
-
-                # AH: Need to add this to eleiminate race condition on server. 
-                rxdata = clientsock.recv(BUFF)
-            # Once there is a accept on the socket, it waits for data from the 
-            # client 
-            # if it does not receive data from the client is continues?  
-            #
             except socket.timeout:
                 continue
 
-            
 
-            try:
+            log.debug('Client Connected from address %s' % repr(addr))  
+            # Set the socket to blocking and receive the clientId information 
+            clientsock.setblocking(1) 
+            rxdata = clientsock.recv(BUFF)
+            if len(rxdata) == 0:
+                log.info("Client %s closed connection abruptly" % repr(addr))
+                continue 
+            else: 
+            # Now receive the clientId information 
                 jdata = json.loads(rxdata.strip())
-            except:
-                    log.info("Exception in commServerThread while trying to parse clientId information in JSON %s" % repr(rxdata))
-                    log.info("Closing connection from client at %s" %(addr)) 
-                    log.info("Leaving commServerThread %s" % threading.currentThread().name)
-                    self.sock.close()
-                    return False 
-            
-            log.info("Received Data from client with Connection Info %s" %(jdata))
-
-            clientId = jdata['src']
-            nthread = Thread(name="ServerHandler for " + str(clientId), target=self.ServerHandler, args=(clientId, clientsock, replyHandler))
-            self.threadMap[clientId] = nthread
-            self.transportMap[clientId] = clientsock
+                log.info("Received Data from client with Connection Info %s" %(jdata))
+                # Setup the server state information for the recent client connection 
+                clientId = jdata['src']
+                nthread = Thread(name="ServerHandler for " + str(clientId), target=self.ServerHandler, args=(clientId, clientsock, replyHandler))
+                self.threadMap[clientId] = nthread
+                self.transportMap[clientId] = clientsock
+                self.activeClientMap[clientId] = True 
 	    
-            nthread.start()
+                # Start the client handling thread 
+                nthread.start()
             
-            log.info('Client %s connected.' %(clientId))
             
         log.info("Leaving commServerThread %s" % threading.currentThread().name)
         self.sock.close()
@@ -101,14 +90,14 @@ class ServerCommService:
     def ServerHandler(self, clientId, clientsock, replyHandler):
         t = threading.currentThread()
         clientsock.settimeout(TXTIMEOUT);
-        log.info("In ServerHandler Running %s" % t.name)
+        log.info("\t %s: In ServerHandler Running" % t.name)
         
         textstring = "Hello Client " + str(clientId) + " from the server" 
         data = json.dumps({'src': 'server', 'text': textstring }) 
         self.sendOneData(clientId, data) 
 
-        while self.active:
-            log.info("Waiting to get data from client")
+        while self.activeClientMap[clientId]:
+            log.info("\t %s: Waiting to get data from client" % t.name)
             try:
                 rxdata = clientsock.recv(BUFF)
                 log.debug("Data Received: %s" %(repr(rxdata)))
@@ -121,7 +110,7 @@ class ServerCommService:
                 if len(rxdata) == 0: 
                     log.info("Exception in commServerThread while trying to parse %s" % repr(rxdata))
                     log.info("Closing connection from client at %s" %(clientId)) 
-                    self.active = False 
+                    self.activeClientMap[clientId] = False 
                     continue
 
             log.debug('ServerHandler RX data: %s' % repr(jdata))
@@ -142,11 +131,10 @@ class ServerCommService:
         clientsock = self.transportMap[clientId]
 
         log.debug('Sending data %s' %(data))
-        clientsock.send(data)
+        clientsock.sendall(data)
 
     def onerecv(self, data):
         log.info('Data is from %s' % repr(data))
-        print ("** All done now **")
         sendstring = "Thank you" 
         return sendstring 
 
